@@ -6,6 +6,7 @@ use crate::util::{divide_and_conquer, int, prime_hash_product, shamir_trick};
 use rug::Integer;
 use std::hash::Hash;
 use std::marker::PhantomData;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 #[derive(Debug)]
 /// The different types of accumulator errors.
@@ -53,7 +54,7 @@ impl<G: UnknownOrderGroup, T: Hash> Clone for Accumulator<G, T> {
 pub struct Witness<G: UnknownOrderGroup, T: Hash>(pub Accumulator<G, T>);
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
-/// A succinct proof of membership (some element is in some accumulator).
+/// A succinct proof of membership (some element (or set of elements) is in some accumulator).
 pub struct MembershipProof<G: UnknownOrderGroup, T: Hash> {
   /// The witness for the element in question.
   pub witness: Witness<G, T>,
@@ -184,16 +185,40 @@ impl<G: UnknownOrderGroup, T: Eq + Hash> Accumulator<G, T> {
   /// # Arguments
   ///
   /// * `elem_witnesses` - Tuples consisting of (element to prove, element's witness).
+  /// We can time this function in more detail.
   pub fn prove_membership(
     &self,
     elem_witnesses: &[(T, Witness<G, T>)],
   ) -> Result<MembershipProof<G, T>, AccError> {
+    let timestamp1: u128 = SystemTime::now()
+      .duration_since(UNIX_EPOCH)
+      .unwrap()
+      .as_micros();
     let witness_accum = self.clone().delete(elem_witnesses)?;
+    let timestamp2: u128 = SystemTime::now()
+      .duration_since(UNIX_EPOCH)
+      .unwrap()
+      .as_micros();
     let prod = elem_witnesses
       .iter()
       .map(|(t, _)| hash_to_prime(t))
-      .product();
+      .product(); /// Is this inefficient? Will divide and conquer make it more efficient?
+    let timestamp3: u128 = SystemTime::now()
+      .duration_since(UNIX_EPOCH)
+      .unwrap()
+      .as_micros();
     let proof = Poe::<G>::prove(&witness_accum.value, &prod, &self.value);
+    let timestamp4: u128 = SystemTime::now()
+      .duration_since(UNIX_EPOCH)
+      .unwrap()
+      .as_micros();
+    println! {
+      "Num elems: {}, Step 1 time, {}, Step 2 time, {}, Step 3 time, {},",
+      elem_witnesses.len(),
+      timestamp2-timestamp1,
+      timestamp3-timestamp2,
+      timestamp4-timestamp3,
+    };
     Ok(MembershipProof {
       witness: Witness(witness_accum),
       proof,
