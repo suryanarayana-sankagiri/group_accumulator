@@ -186,6 +186,7 @@ impl<G: UnknownOrderGroup, T: Eq + Hash> Accumulator<G, T> {
   ///
   /// * `elem_witnesses` - Tuples consisting of (element to prove, element's witness).
   /// We can time this function in more detail.
+  /// Added timing functionality
   pub fn prove_membership(
     &self,
     elem_witnesses: &[(T, Witness<G, T>)],
@@ -194,11 +195,14 @@ impl<G: UnknownOrderGroup, T: Eq + Hash> Accumulator<G, T> {
       .duration_since(UNIX_EPOCH)
       .unwrap()
       .as_micros();
+    ///Step 1
     let witness_accum = self.clone().delete(elem_witnesses)?;
     let timestamp2: u128 = SystemTime::now()
       .duration_since(UNIX_EPOCH)
       .unwrap()
       .as_micros();
+
+    /// Step 2
     let prod = elem_witnesses
       .iter()
       .map(|(t, _)| hash_to_prime(t))
@@ -207,6 +211,8 @@ impl<G: UnknownOrderGroup, T: Eq + Hash> Accumulator<G, T> {
       .duration_since(UNIX_EPOCH)
       .unwrap()
       .as_micros();
+
+    /// Step 3
     let proof = Poe::<G>::prove(&witness_accum.value, &prod, &self.value);
     let timestamp4: u128 = SystemTime::now()
       .duration_since(UNIX_EPOCH)

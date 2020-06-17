@@ -36,3 +36,24 @@ fn stress_test() {
     assert!(acc.verify_nonmembership(&[new_elem], &nonmem_proof));
   }
 }
+#[test]
+fn timing_test() {
+  let mut acc_set = Vec::new();
+  let mut acc = Accumulator::<Rsa2048, [u8; 32]>::empty();
+  let mut witnesses = Vec::new();
+  let mut new_witnesses = Vec::new();
+  for _ in 0..100 {
+    let random_elem = rand::thread_rng().gen::<[u8; 32]>();
+    acc_set.push(random_elem);
+  }
+  println!("Starting add");
+  for i in 0..100 {
+      acc, proof = acc.clone().add_with_proof(&[acc_set[i]]);
+      for witns in witnesses {
+          new_witnesses.push(acc.update_membership_witness(*witns, ).unwrap());
+      }
+      new_witnesses.push(proof.witness);
+      witnesses = new_witnesses.copy();
+
+  }
+}
